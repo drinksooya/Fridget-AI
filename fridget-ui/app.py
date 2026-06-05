@@ -22,9 +22,9 @@ if st.session_state.ingredients_list:
     st.write("### Your Current Basket:")
     st.info(", ".join(st.session_state.ingredients_list))
 
-if st.button("Clear Basket"):
-    st.session_state.ingredients_list = []
-    st.rerun()
+    if st.button("Clear Basket"):
+        st.session_state.ingredients_list = []
+        st.rerun()
 
 if st.session_state.ingredients_list:
     if st.button("🚀 Raid the Fridge!", type="primary"):
