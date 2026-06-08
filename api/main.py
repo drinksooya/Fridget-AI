@@ -9,7 +9,7 @@ from api.database import get_db
 from api.models import RecipeDB
 
 app = FastAPI()
-api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCJZekshF3JWJ4sJr2naatW-TX-yiC5IfU")
+api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
 app.add_middleware(
