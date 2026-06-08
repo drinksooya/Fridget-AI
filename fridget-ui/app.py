@@ -9,7 +9,7 @@ st.subheader("Raid your fridge and let AI cook up the perfect meal!")
 if "ingredients_list" not in st.session_state:
     st.session_state.ingredients_list = []
 
-new_ingredient = st.text_input("Type"" an ingredient and press Enter:", placeholder="e.g., eggs, bacon, cheese")
+new_ingredient = st.text_input("Type an ingredient and press Enter:", placeholder="e.g., eggs, bacon, cheese")
 
 if new_ingredient:
     clean_item = new_ingredient.strip().lower()
@@ -19,10 +19,10 @@ if new_ingredient:
     st.rerun()
 
 if st.session_state.ingredients_list:
-    st.write("### Your Current Basket:")
+    st.write("### Your Current Ingredients:")
     st.info(", ".join(st.session_state.ingredients_list))
 
-    if st.button("Clear Basket"):
+    if st.button("Clear Ingredients"):
         st.session_state.ingredients_list = []
         st.rerun()
 
@@ -31,7 +31,6 @@ if st.session_state.ingredients_list:
 
         with st.spinner("Chef Gemini is cooking up a recipe..."):
             try:
-
                 url = "https://fridget-ai.vercel.app/api/generate-recipe"
 
                 payload = {
