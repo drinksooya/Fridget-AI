@@ -1,12 +1,29 @@
 import streamlit as st
-import requests
+import json
+from google import genai
+from google.genai import types
 
 st.set_page_config(page_title="Fridget AI Chef", page_icon="🍳", layout="centered")
 
 st.title("🍳 Fridget AI Chef")
 st.subheader("Raid your fridge and let AI cook up the perfect meal!")
 
-# Initialize session state
+# --- SECURE API KEY INITIALIZATION ---
+# This looks for an environment variable or a Streamlit Secret
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    # Fallback for local development if you haven't set up secrets yet
+    api_key = st.sidebar.text_input("Enter Gemini API Key:", type="password")
+
+# Initialize the Gemini Client
+if api_key:
+    client = genai.Client(api_key=api_key)
+else:
+    st.warning("Please provide a Gemini API Key to proceed.")
+    st.stop()
+
+# --- STATE MANAGEMENT ---
 if "ingredients_list" not in st.session_state:
     st.session_state.ingredients_list = []
 
@@ -30,35 +47,64 @@ if st.session_state.ingredients_list:
         st.session_state.ingredients_list = []
         st.rerun()
 
-    st.markdown("---")  # Visual separator
+    st.markdown("---")
 
-# --- API CALL SECTION ---
+# --- NATIVE AI RECIPE GENERATION ---
 if st.session_state.ingredients_list:
     if st.button("🚀 Raid the Fridge!", type="primary"):
-        with st.spinner("Chef Gemini is cooking up a recipe..."):
+        with st.spinner("Chef Gemini is cooking up a recipe... (No time limits!)"):
             try:
-                url = "https://fridget-ai.vercel.app/api/generate-recipe"
-                payload = {"ingredients": st.session_state.ingredients_list}
+                # Define exactly what JSON structure we want Gemini to return
+                recipe_schema = types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "recipe_name": types.Schema(type=types.Type.STRING),
+                        "cooking_time": types.Schema(type=types.Type.STRING),
+                        "macros": types.Schema(
+                            type=types.Type.OBJECT,
+                            properties={
+                                "calories": types.Schema(type=types.Type.STRING),
+                                "protein": types.Schema(type=types.Type.STRING),
+                                "carbohydrates": types.Schema(type=types.Type.STRING),
+                            }
+                        ),
+                        "instructions": types.Schema(
+                            type=types.Type.ARRAY,
+                            items=types.Schema(type=types.Type.STRING)
+                        )
+                    },
+                    required=["recipe_name", "cooking_time", "macros", "instructions"]
+                )
 
-                response = requests.post(url, json=payload)
+                prompt = f"Create a wonderful recipe using some or all of these ingredients: {', '.join(st.session_state.ingredients_list)}. Be concise with instructions."
 
-                if response.status_code == 200:
-                    recipe_data = response.json()
+                # Call Gemini directly!
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=recipe_schema,
+                        temperature=0.7
+                    ),
+                )
 
-                    st.success(f"## {recipe_data.get('recipe_name', 'Your Custom Recipe')}")
-                    st.write(f"⏱️ **Cooking Time:** {recipe_data.get('cooking_time', 'N/A')}")
+                # Convert the response text straight into a Python dictionary
+                recipe_data = json.loads(response.text)
 
-                    col1, col2, col3 = st.columns(3)
-                    macros = recipe_data.get('macros', {})
-                    col1.metric("Calories", macros.get('calories', 'N/A'))
-                    col2.metric("Protein", macros.get('protein', 'N/A'))
-                    col3.metric("Carbs", macros.get('carbohydrates', 'N/A'))
+                # --- DISPLAY RESULTS ---
+                st.success(f"## {recipe_data.get('recipe_name')}")
+                st.write(f"⏱️ **Cooking Time:** {recipe_data.get('cooking_time')}")
 
-                    st.write("### 📝 Instructions:")
-                    for step in recipe_data.get('instructions', []):
-                        st.write(f"- {step}")
-                else:
-                    st.error(f"Backend returned an error: {response.status_code}")
+                col1, col2, col3 = st.columns(3)
+                macros = recipe_data.get('macros', {})
+                col1.metric("Calories", macros.get('calories', 'N/A'))
+                col2.metric("Protein", macros.get('protein', 'N/A'))
+                col3.metric("Carbs", macros.get('carbohydrates', 'N/A'))
+
+                st.write("### 📝 Instructions:")
+                for step in recipe_data.get('instructions', []):
+                    st.write(f"- {step}")
 
             except Exception as e:
-                st.error(f"Could not connect to backend: {str(e)}")
+                st.error(f"Error generating recipe: {str(e)}")
