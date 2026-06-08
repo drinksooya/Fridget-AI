@@ -9,7 +9,7 @@ st.subheader("Raid your fridge and let AI cook up the perfect meal!")
 if "ingredients_list" not in st.session_state:
     st.session_state.ingredients_list = []
 
-new_ingredient = st.text_input("Type an ingredient and press Enter:", placeholder="e.g., eggs, bacon, cheese")
+new_ingredient = st.text_input("Type"" an ingredient and press Enter:", placeholder="e.g., eggs, bacon, cheese")
 
 if new_ingredient:
     clean_item = new_ingredient.strip().lower()
